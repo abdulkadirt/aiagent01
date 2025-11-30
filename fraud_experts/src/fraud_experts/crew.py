@@ -1,7 +1,11 @@
-from crewai import Agent, Crew, Process, Task
+from crewai import Agent, Crew, Process, Task , LLM
 from crewai.project import CrewBase, agent, crew, task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 # If you want to run a snippet of code before or after the crew starts,
 # you can use the @before_kickoff and @after_kickoff decorators
 # https://docs.crewai.com/concepts/crews#example-crew-class-with-decorators
@@ -13,6 +17,28 @@ class FraudExperts():
     agents: List[BaseAgent]
     tasks: List[Task]
 
+    def __init__(self):
+        """
+        Crew başlatılırken LLM'i yapılandır.
+
+        Neden buraya yazdık?
+        - Her crew nesnesi oluşturulduğunda çalışır
+        - LLM ayarlarını merkezi bir yerden yönetiriz
+        - . env dosyasından otomatik okur
+        """
+        # .env'den model adını oku, yoksa default değer kullan
+        model_name = os.getenv("MODEL", "gemini/gemini-2.5-flash-preview-04-17")
+        api_key = os.getenv("GEMINI_API_KEY")
+
+        # LLM nesnesini oluştur
+        self.llm = LLM(
+            model=model_name,
+            api_key=api_key,
+            temperature=0.7  # Yaratıcılık seviyesi (0=deterministik, 1=yaratıcı)
+        )
+
+        print(f"🤖 LLM Configured: {model_name}")  # Debug için
+
     # Learn more about YAML configuration files here:
     # Agents: https://docs.crewai.com/concepts/agents#yaml-configuration-recommended
     # Tasks: https://docs.crewai.com/concepts/tasks#yaml-configuration-recommended
@@ -23,14 +49,16 @@ class FraudExperts():
     def researcher(self) -> Agent:
         return Agent(
             config=self.agents_config['researcher'], # type: ignore[index]
-            verbose=True
+            verbose=True,
+            llm=self.llm
         )
 
     @agent
     def reporting_analyst(self) -> Agent:
         return Agent(
             config=self.agents_config['reporting_analyst'], # type: ignore[index]
-            verbose=True
+            verbose=True,
+            llm=self.llm
         )
 
     # To learn more about structured task outputs,
