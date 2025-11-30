@@ -1,17 +1,336 @@
-research_task:
+research_fraud_methods_task:
   description: >
-    Conduct a thorough research about {topic}
-    Make sure you find any interesting and relevant information given
-    the current year is {current_year}.
-  expected_output: >
-    A list with 10 bullet points of the most relevant information about {topic}
-  agent: researcher
+    Research and identify the most effective fraud detection techniques for 
+    the IEEE-CIS fraud detection dataset. Focus on:
+    
+    1. Kaggle IEEE-CIS competition winning solutions and their key techniques
+    2. Feature engineering approaches for transaction data (temporal, aggregation, frequency encoding)
+    3. Handling severe class imbalance (fraud is typically 3-5% of data)
+    4. Best models for tabular fraud data (XGBoost, LightGBM, CatBoost)
+    5. Time-aware validation strategies to avoid data leakage
+    6. Evaluation metrics for imbalanced fraud detection
+    
+    Provide a prioritized list of techniques with explanations of:
+    - Why this technique works for fraud detection
+    - How to implement it
+    - Expected impact on model performance
+    
+    Current year is {current_year}.  Focus on proven techniques, not just theoretical approaches.
 
-reporting_task:
-  description: >
-    Review the context you got and expand each topic into a full section for a report.
-    Make sure the report is detailed and contains any and all relevant information.
   expected_output: >
-    A fully fledged report with the main topics, each with a full section of information.
-    Formatted as markdown without '```'
-  agent: reporting_analyst
+    A structured report with 10-15 actionable recommendations, each containing:
+    - Technique name
+    - Category (feature engineering / model selection / validation / etc.)
+    - Fraud detection intuition (why it works)
+    - Implementation approach (high-level steps)
+    - Expected impact (high/medium/low)
+    - References (Kaggle notebooks, papers, etc.)
+    
+    Format as markdown with clear sections. 
+
+  agent: fraud_research_agent
+
+
+data_analysis_task:
+  description: >
+    Perform comprehensive exploratory data analysis (EDA) on the IEEE-CIS 
+    fraud detection dataset located at {dataset_path}. The dataset consists of:
+    - train_transaction. csv: Transaction information
+    - train_identity.csv: Identity information (join on TransactionID)
+    - Target variable: isFraud (1 = fraud, 0 = legitimate)
+    
+    Analyze the following aspects:
+    
+    1.  **Dataset Overview**:
+       - Number of transactions, features, fraud rate
+       - Train/test split strategy (time-based split recommended)
+    
+    2. **Data Quality**:
+       - Missing values per feature (% missing)
+       - Data types (numerical, categorical, mixed)
+       - Outliers and anomalies
+    
+    3.  **Target Variable Analysis**:
+       - Class imbalance (fraud vs legitimate ratio)
+       - Fraud distribution over time (fraud rate stability)
+    
+    4. **Feature Analysis**:
+       - Numerical features: distributions, skewness, outliers
+       - Categorical features: cardinality, rare categories
+       - Transaction amount patterns (fraud vs legitimate)
+       - Temporal patterns (hour, day, month trends)
+    
+    5. **Correlation Analysis**:
+       - Feature correlations with target (isFraud)
+       - Feature correlations with each other (multicollinearity)
+    
+    6. **Fraud Patterns**:
+       - Which features differ most between fraud and legitimate? 
+       - Are there obvious fraud patterns (e.g., specific card types, countries)?
+    
+    7. **Data Leakage Risks**:
+       - Identify features that might leak future information
+       - Check for perfect correlations or suspicious patterns
+    
+    Use insights from the research task to guide your analysis.  Suggest specific 
+    visualizations and statistical tests. 
+
+  expected_output: >
+    A detailed EDA report in markdown format with:
+    
+    1. Executive Summary (key findings in 5 bullet points)
+    2. Dataset Overview (size, fraud rate, time period)
+    3. Data Quality Report (missing values table, data type issues)
+    4. Target Variable Analysis (class imbalance stats, temporal trends)
+    5. Feature Analysis Summary (top 10 most promising features and why)
+    6. Correlation Insights (top correlations with fraud)
+    7. Fraud Patterns Identified (behavioral differences)
+    8. Data Leakage Warnings (if any)
+    9. Recommendations for Next Steps (feature engineering priorities)
+    
+    Include specific numbers, percentages, and actionable insights.
+
+  agent: data_analyst_agent
+  context:
+    - research_fraud_methods_task
+
+feature_engineering_task:
+  description: >
+    Based on the EDA findings and research insights, design a comprehensive 
+    feature engineering strategy for the IEEE-CIS fraud detection dataset. 
+    
+    Create features in these categories:
+    
+    1.  **Temporal Features**:
+       - Hour of day, day of week, day of month
+       - Time since last transaction (per card, per email, etc.)
+       - Transaction velocity (count in last 1h, 24h, 7d)
+    
+    2. **Aggregation Features**:
+       - Per card: total amount, mean amount, std amount, transaction count
+       - Per email: transaction count, fraud rate
+       - Per address: transaction count, unique cards used
+       - Rolling statistics (last N transactions)
+    
+    3.  **Frequency Encoding**:
+       - How often does this card appear in training data?
+       - How often does this email/address/device appear?
+       - Rare category indicator (appears < 10 times)
+    
+    4.  **Interaction Features**:
+       - Amount × hour_of_day (large transactions at night suspicious)
+       - Amount × card_type
+       - Categorical combinations (card + country)
+    
+    5. **Domain-Specific Fraud Indicators**:
+       - Unusual amount for this card (z-score)
+       - First-time user flag
+       - Multiple transactions in short time
+       - Mismatch between billing and shipping country
+    
+    6. **Null Pattern Features**:
+       - Count of missing values per transaction
+       - Which combination of fields is missing (pattern encoding)
+    
+    For each feature:
+    - Explain the fraud detection intuition
+    - Provide implementation approach (pandas/numpy code sketch)
+    - Indicate importance (high/medium/low)
+    - Warn about data leakage risks
+    
+    Prioritize features based on EDA findings.  Suggest a validation strategy 
+    to test feature importance.
+
+  expected_output: >
+    A feature engineering plan document in markdown format with:
+    
+    1. Executive Summary (top 5 most important feature categories)
+    2. Detailed Feature Specifications (grouped by category):
+       - Feature name
+       - Fraud detection intuition (why it helps)
+       - Implementation pseudocode or pandas code
+       - Data leakage check (safe/risky)
+       - Expected importance (high/medium/low)
+    3. Feature Validation Strategy (how to test feature importance)
+    4. Implementation Priority (which features to create first)
+    5. Code Template (Python functions to create features)
+    6. Warnings and Gotchas (common mistakes to avoid)
+    
+    Include at least 20-30 feature ideas with 10-15 marked as high priority.
+
+  agent: feature_engineer_agent
+  context:
+    - data_analysis_task
+    - research_fraud_methods_task
+
+model_development_task:
+  description: >
+    Develop a machine learning model for fraud detection using the IEEE-CIS 
+    dataset with the engineered features. 
+    
+    Follow this approach:
+    
+    1. **Model Selection**:
+       - Primary recommendation: XGBoost or LightGBM (explain choice)
+       - Alternative models: CatBoost, Random Forest
+       - Why tree-based models work well for tabular fraud data
+    
+    2.  **Handling Class Imbalance**:
+       - Recommend 2-3 techniques (class weights, SMOTE, threshold tuning)
+       - Explain trade-offs of each approach
+       - Suggest optimal approach for fraud detection
+    
+    3. **Cross-Validation Strategy**:
+       - Time-aware split (TimeSeriesSplit or custom temporal split)
+       - Why random K-Fold is dangerous for fraud detection
+       - Number of folds and validation set size
+    
+    4.  **Hyperparameter Tuning**:
+       - Initial hyperparameters (baseline model)
+       - Key hyperparameters to tune for fraud detection:
+         * Learning rate, max_depth, min_child_weight
+         * scale_pos_weight (class imbalance)
+         * subsample, colsample_bytree (regularization)
+       - Tuning strategy (grid search, random search, Bayesian optimization)
+    
+    5. **Training Pipeline**:
+       - Data preprocessing (scaling, encoding)
+       - Feature selection (remove low-importance features)
+       - Model training with early stopping
+       - Cross-validation performance tracking
+    
+    6. **Code Implementation**:
+       - Provide clean, reproducible Python code
+       - Use random seeds for reproducibility
+       - Include logging and progress tracking
+       - Handle missing values appropriately
+    
+    Consider research insights and feature engineering recommendations. 
+
+  expected_output: >
+    A model development guide in markdown format with:
+    
+    1. Model Selection Recommendation (with justification)
+    2. Class Imbalance Handling Strategy (recommended approach + alternatives)
+    3. Cross-Validation Setup (code + explanation)
+    4.  Hyperparameter Recommendations:
+       - Baseline hyperparameters (dict format)
+       - Hyperparameters to tune (with ranges)
+       - Tuning strategy
+    5. Complete Training Pipeline (Python code):
+       - Data loading and preprocessing
+       - Feature engineering application
+       - Model training with cross-validation
+       - Model saving
+    6. Best Practices Checklist (reproducibility, validation, etc.)
+    7. Expected Performance Baseline (what metrics to expect initially)
+    
+    Code should be copy-paste ready with clear comments.
+
+  agent: ml_engineer_agent
+  context:
+    - feature_engineering_task
+    - data_analysis_task
+    - research_fraud_methods_task
+
+model_evaluation_task:
+  description: >
+    Evaluate the fraud detection model comprehensively and provide actionable 
+    recommendations for improvement.
+    
+    Perform the following analysis:
+    
+    1. **Metrics Evaluation**:
+       - AUC-ROC (overall discrimination ability)
+       - PR-AUC (precision-recall curve area - critical for imbalanced data)
+       - Confusion matrix at multiple thresholds
+       - Precision, Recall, F1 at different operating points
+       - False Positive Rate vs True Positive Rate trade-offs
+    
+    2. **Business Impact Analysis**:
+       - At 80% recall, what's the false positive rate?
+       - If we block transactions with >0.5 fraud probability, how many legit transactions affected?
+       - Cost-benefit analysis (fraud loss vs customer friction)
+       - Recommended operating threshold
+    
+    3. **Model Behavior Analysis**:
+       - Feature importance (top 20 features)
+       - Prediction distribution (are probabilities well-calibrated?)
+       - Performance by fraud type (if distinguishable)
+       - Performance over time (does it degrade?)
+    
+    4.  **Error Analysis**:
+       - False negatives: What fraud cases did we miss?  (common patterns)
+       - False positives: Why did we flag legitimate transactions? 
+       - High-confidence errors (model very confident but wrong)
+    
+    5. **Validation Quality**:
+       - Is there overfitting? (train vs validation performance gap)
+       - Is validation strategy appropriate?  (time-aware split?)
+       - Cross-validation stability (std of CV scores)
+    
+    6. **Improvement Recommendations**:
+       - Feature engineering improvements (based on error analysis)
+       - Hyperparameter tuning suggestions
+       - Alternative modeling approaches
+       - Ensemble opportunities
+       - Data collection recommendations
+    
+    Provide visualizations specifications (ROC curve, PR curve, confusion matrix, 
+    feature importance).  Explain everything from a business perspective, not 
+    just technical metrics.
+
+  expected_output: >
+    A comprehensive model evaluation report in markdown format with:
+    
+    1. Executive Summary:
+       - Model performance in one paragraph
+       - Key strengths and weaknesses
+       - Recommended deployment threshold
+       - Expected business impact
+    
+    2.  Metrics Dashboard (table format):
+       - AUC-ROC, PR-AUC, F1, Precision, Recall at multiple thresholds
+       - Comparison to baseline (e.g., always predict majority class)
+    
+    3. Business Impact Analysis:
+       - Trade-off table (threshold vs recall vs FPR)
+       - Recommended operating point with justification
+       - Estimated cost savings vs customer friction
+    
+    4. Model Behavior Insights:
+       - Top 20 features with importance scores
+       - Interpretation of key features
+       - Prediction calibration assessment
+    
+    5. Error Analysis:
+       - False negative patterns (what fraud we miss)
+       - False positive patterns (why legit flagged)
+       - High-impact errors
+    
+    6. Validation Quality Check:
+       - Overfitting assessment
+       - Cross-validation stability
+       - Potential data leakage warnings
+    
+    7. Improvement Roadmap (prioritized):
+       - Quick wins (easy, high impact)
+       - Medium-term improvements
+       - Long-term research directions
+    
+    8. Visualization Specifications:
+       - ROC curve code
+       - PR curve code
+       - Confusion matrix code
+       - Feature importance plot code
+    
+    Include specific numbers, percentages, and actionable next steps.
+
+  agent: model_evaluator_agent
+  context:
+    - model_development_task
+    - feature_engineering_task
+    - data_analysis_task
+    - research_fraud_methods_task
+
+  output_file: 'fraud_detection_evaluation_report.md'
