@@ -30,7 +30,7 @@ def run():
     project_root = Path(__file__).parent.parent.parent  # main.py'den 3 üst klasör
 
     # Veri klasörleri
-    processed_data_dir = project_root / "data" / "processed"
+    processed_data_dir = project_root / "src" / "fraud_experts" / "data" / "processed"
     train_file = processed_data_dir / "train_merged.csv"
 
     # Çıktı klasörleri (oluştur)

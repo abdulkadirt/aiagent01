@@ -39,7 +39,7 @@ class FraudExperts():
         - Merkezi bir yerden LLM ayarlarını yönetiriz
         """
         # . env'den model adını oku, yoksa default değer kullan
-        model_name = os.getenv("MODEL", "gemini/gemini-2.5-flash-preview-04-17")
+        model_name = os.getenv("MODEL", "gemini/gemini-2.5-flash")
         api_key = os.getenv("GEMINI_API_KEY")
 
         # LLM nesnesini oluştur
