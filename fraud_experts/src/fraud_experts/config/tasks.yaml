@@ -35,8 +35,14 @@ data_analysis_task:
   description: >
     Perform comprehensive exploratory data analysis (EDA) on the IEEE-CIS 
     fraud detection dataset located at {dataset_path}. The dataset consists of:
-    - train_transaction. csv: Transaction information
-    - train_identity.csv: Identity information (join on TransactionID)
+    - Load the fraud detection dataset from {dataset_path}
+    -If use_sample is True, use only first {sample_size} rows:
+    ```python
+    if use_sample:
+        df = pd.read_csv(dataset_path, nrows=sample_size)
+    else:
+        df = pd.read_csv(dataset_path)
+    ```
     - Target variable: isFraud (1 = fraud, 0 = legitimate)
     
     Analyze the following aspects:
